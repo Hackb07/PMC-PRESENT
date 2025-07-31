@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 // --- MOCK ICONS (using emojis for web) ---
 const Icon = ({ name, size = 24, color = '#000' }) => {
@@ -308,6 +308,30 @@ const UploadsScreen = ({ attendanceRecords, userProfile }) => {
         }
     };
 
+    // --- Data Filtering Logic ---
+    const getFilteredRecords = useCallback((records) => {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        return records.filter(record => {
+            const recordDate = new Date(record.date);
+            switch(filter) {
+                case 'daily':
+                    return recordDate >= today;
+                case 'weekly':
+                    const weekStart = new Date(today);
+                    weekStart.setDate(today.getDate() - today.getDay());
+                    return recordDate >= weekStart;
+                case 'monthly':
+                    return recordDate.getMonth() === today.getMonth() && recordDate.getFullYear() === today.getFullYear();
+                case 'yearly':
+                    return recordDate.getFullYear() === today.getFullYear();
+                default:
+                    return true;
+            }
+        });
+    }, [filter]);
+
     const handleDownload = () => {
         let recordsToDownload = [];
         let filename = `attendance_report_${filter}.csv`;
@@ -330,30 +354,6 @@ const UploadsScreen = ({ attendanceRecords, userProfile }) => {
         }
 
         downloadCSV(recordsToDownload, filename);
-    };
-
-    // --- Data Filtering Logic ---
-    const getFilteredRecords = (records) => {
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        
-        return records.filter(record => {
-            const recordDate = new Date(record.date);
-            switch(filter) {
-                case 'daily':
-                    return recordDate >= today;
-                case 'weekly':
-                    const weekStart = new Date(today);
-                    weekStart.setDate(today.getDate() - today.getDay());
-                    return recordDate >= weekStart;
-                case 'monthly':
-                    return recordDate.getMonth() === today.getMonth() && recordDate.getFullYear() === today.getFullYear();
-                case 'yearly':
-                    return recordDate.getFullYear() === today.getFullYear();
-                default:
-                    return true;
-            }
-        });
     };
 
     useEffect(() => {
@@ -383,7 +383,7 @@ const UploadsScreen = ({ attendanceRecords, userProfile }) => {
 
         setReportData(aggregatedData);
 
-    }, [filter, attendanceRecords, userProfile]);
+    }, [filter, attendanceRecords, userProfile, getFilteredRecords]);
 
     const handleShare = async (recipient) => {
         // 1. Check for Web Share API support for files
